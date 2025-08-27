@@ -13,4 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends gcc build-essen
 
 RUN mkdir -p $DAGSTER_HOME
 WORKDIR /opt/dagster
+
+# 你现有的 Dockerfile 里补一行
+RUN pip install --no-cache-dir kafka-python==2.0.2
+
 EXPOSE 3000
