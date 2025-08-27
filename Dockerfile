@@ -1,5 +1,5 @@
 # 用官方 Dagster 镜像（包含 webserver/daemon 等运行时）
-FROM docker.io/dagster/dagster:1.11.7
+FROM docker.io/dagster/dagster:1.6.17
 
 # 如需在国内构建更快，可开启镜像源（GitHub Actions 通常无需）
 # ENV PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple
