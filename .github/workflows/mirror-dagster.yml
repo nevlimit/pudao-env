@@ -1,0 +1,21 @@
+name: Mirror Dagster to ACR
+on:
+  workflow_dispatch: {}   # 手动触发
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install skopeo
+        run: sudo apt-get update && sudo apt-get install -y skopeo
+
+      - name: Copy dagster image to ACR
+        env:
+          ACR: ${{ secrets.ACR_REGISTRY }}
+          USERNAME: ${{ secrets.ACR_USERNAME }}
+          PASSWORD: ${{ secrets.ACR_PASSWORD }}
+        run: |
+          set -e
+          SRC=docker://docker.io/dagster/dagster:1.6.17
+          DST=docker://${ACR}/pudao_dev/dagster:1.6.17
+          skopeo copy "$SRC" "$DST" --dest-creds "${USERNAME}:${PASSWORD}"
