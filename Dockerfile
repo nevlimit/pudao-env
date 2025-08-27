@@ -18,7 +18,7 @@ WORKDIR /opt/dagster
 RUN pip install --no-cache-dir kafka-python==2.0.2
 
 # 你当前用的基础镜像版本（保持和 compose 里一致）
-FROM docker.io/dagster/dagster:1.6.17
+FROM docker.io/dagster/dagster:1.11.7
 
 # 如镜像使用非root用户，先切回 root 安装，然后还原
 USER root
