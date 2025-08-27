@@ -1,21 +1,46 @@
 name: Mirror Dagster to ACR
 on:
-  workflow_dispatch: {}   # 手动触发
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Dagster image tag (e.g. 1.6.17 or latest)'
+        required: true
+        default: 'latest'   # 先用 latest 成功跑通；需要特定版本时改成具体 tag
 
 jobs:
   mirror:
     runs-on: ubuntu-latest
     steps:
-      - name: Install skopeo
-        run: sudo apt-get update && sudo apt-get install -y skopeo
+      - name: Install skopeo & jq
+        run: sudo apt-get update && sudo apt-get install -y skopeo jq
 
-      - name: Copy dagster image to ACR
+      - name: Copy with fallback (Docker Hub -> GHCR)
         env:
-          ACR: ${{ secrets.ACR_REGISTRY }}
-          USERNAME: ${{ secrets.ACR_USERNAME }}
-          PASSWORD: ${{ secrets.ACR_PASSWORD }}
+          ACR:       ${{ secrets.ACR_REGISTRY }}
+          USERNAME:  ${{ secrets.ACR_USERNAME }}
+          PASSWORD:  ${{ secrets.ACR_PASSWORD }}
+          TAG:       ${{ github.event.inputs.tag }}
         run: |
-          set -e
-          SRC=docker://docker.io/dagster/dagster:1.6.17
-          DST=docker://${ACR}/pudao_dev/dagster:1.6.17
-          skopeo copy "$SRC" "$DST" --dest-creds "${USERNAME}:${PASSWORD}"
+          set -euxo pipefail
+          dst="docker://${ACR}/pudao_dev/dagster:${TAG}"
+
+          # 1) 先试 Docker Hub
+          if skopeo inspect docker://docker.io/dagster/dagster:${TAG} >/dev/null 2>&1; then
+            skopeo copy --retry-times 3 \
+              docker://docker.io/dagster/dagster:${TAG} \
+              "$dst" --dest-creds "${USERNAME}:${PASSWORD}"
+            exit 0
+          fi
+
+          # 2) 再试 GHCR
+          if skopeo inspect docker://ghcr.io/dagster-io/dagster:${TAG} >/dev/null 2>&1; then
+            skopeo copy --retry-times 3 \
+              docker://ghcr.io/dagster-io/dagster:${TAG} \
+              "$dst" --dest-creds "${USERNAME}:${PASSWORD}"
+            exit 0
+          fi
+
+          echo "Tag ${TAG} not found on docker.io or ghcr.io" >&2
+          echo "建议改用 'latest'，或先用下面命令打印可用的 1.6.* 标签：" >&2
+          echo "skopeo list-tags docker://docker.io/dagster/dagster | jq -r '.Tags[]' | grep '^1\\.6\\.' | sort -V | tail -n 30" >&2
+          exit 1
