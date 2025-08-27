@@ -1,31 +1,20 @@
-# 用官方 Dagster 镜像（包含 webserver/daemon 等运行时）
-FROM docker.io/dagster/dagster:1.6.17
+FROM python:3.10-slim
 
-# 如需在国内构建更快，可开启镜像源（GitHub Actions 通常无需）
-# ENV PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple
+ENV PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DAGSTER_HOME=/opt/dagster/dagster_home
 
-# 切到 root 安装依赖，再还原为默认用户
-USER root
-
-# 必要依赖：本地 JSON Schema 校验 + Kafka 客户端（confluent-kafka）
+# 安装 Dagster（Web UI + Daemon）及常用集成
+RUN apt-get update && apt-get install -y --no-install-recommends gcc build-essential \
+ && pip install "dagster==1.11.7" "dagster-webserver==1.11.7" \
+               dagster-postgres dagster-docker \
+ && apt-get purge -y gcc build-essential && apt-get autoremove -y \
+ && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir kafka-python==2.0.2
 RUN pip install --no-cache-dir \
       jsonschema==4.22.0 \
       confluent-kafka==2.5.0
-
-# 准备目录与权限（官方镜像里已设置 DAGSTER_HOME，这里稳妥起见再确认）
-ENV DAGSTER_HOME=/opt/dagster/dagster_home
-RUN mkdir -p /opt/dagster /opt/dagster/dagster_home && \
-    chown -R 10101:10101 /opt/dagster
-
-# 还原成镜像默认的非特权用户
-USER 10101
-
+RUN mkdir -p $DAGSTER_HOME
 WORKDIR /opt/dagster
+
 EXPOSE 3000
-
-# 不在镜像里固定 CMD，继续由 docker-compose 传入：
-# 例如：["dagster-webserver","-h","0.0.0.0","-p","3000","-w","/opt/dagster/workspace.yaml"]
-
-# 如你想把代码也打进镜像（可选），解除下面注释，并确保仓库里有这些文件
-# COPY workspace.yaml /opt/dagster/workspace.yaml
-# COPY app/ /opt/dagster/app/
