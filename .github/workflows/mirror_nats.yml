@@ -1,0 +1,29 @@
+name: Mirror NATS images to ACR
+on:
+  workflow_dispatch: {}
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to ACR
+        run: |
+          echo "${{ secrets.ACR_PASSWORD }}" | docker login crpi-r213v0d5lnqnghz2.cn-beijing.personal.cr.aliyuncs.com \
+            -u "${{ secrets.ACR_USERNAME }}" --password-stdin
+
+      - name: Pull from Docker Hub & Push to ACR
+        env:
+          DST_REG: crpi-r213v0d5lnqnghz2.cn-beijing.personal.cr.aliyuncs.com
+          NS: pudao_dev
+        run: |
+          set -eux
+          SRC_NATS=docker.io/nats:2.10-alpine
+          SRC_BOX=docker.io/synadia/nats-box:0.13.0
+
+          docker pull "$SRC_NATS"
+          docker tag  "$SRC_NATS" "$DST_REG/$NS/nats:2.10-alpine"
+          docker push "$DST_REG/$NS/nats:2.10-alpine"
+
+          docker pull "$SRC_BOX"
+          docker tag  "$SRC_BOX" "$DST_REG/$NS/nats-box:0.13.0"
+          docker push "$DST_REG/$NS/nats-box:0.13.0"
