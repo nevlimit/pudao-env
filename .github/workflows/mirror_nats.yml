@@ -1,3 +1,4 @@
+# .github/workflows/mirror_nats.yml
 name: Mirror NATS images to ACR
 on:
   workflow_dispatch: {}
@@ -17,13 +18,16 @@ jobs:
           NS: pudao_dev
         run: |
           set -eux
-          SRC_NATS=docker.io/nats:2.10-alpine
-          SRC_BOX=docker.io/synadia/nats-box:0.13.0
 
+          SRC_NATS=docker.io/nats:2.10-alpine
+          SRC_BOX=docker.io/natsio/nats-box:0.14.6
+
+          # nats
           docker pull "$SRC_NATS"
           docker tag  "$SRC_NATS" "$DST_REG/$NS/nats:2.10-alpine"
           docker push "$DST_REG/$NS/nats:2.10-alpine"
 
+          # nats-box
           docker pull "$SRC_BOX"
-          docker tag  "$SRC_BOX" "$DST_REG/$NS/nats-box:0.13.0"
-          docker push "$DST_REG/$NS/nats-box:0.13.0"
+          docker tag  "$SRC_BOX" "$DST_REG/$NS/nats-box:0.14.6"
+          docker push "$DST_REG/$NS/nats-box:0.14.6"
